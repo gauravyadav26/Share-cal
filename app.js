@@ -48,6 +48,7 @@ const groupMembersInput = document.getElementById('group-members');
 const deleteGroupBtn = document.getElementById('delete-group-btn');
 const editGroupBtn = document.getElementById('edit-group-btn');
 const syncBtn = document.getElementById('sync-btn');
+const loadFromCloudBtn = document.getElementById('load-from-cloud-btn');
 let currentGroupId = null;
 let currentGroupName = '';
 let currentGroupMembers = [];
@@ -525,6 +526,157 @@ syncBtn.onclick = async () => {
   syncBtn.textContent = 'Sync to Cloud';
 };
 
+// --- LOAD DATA FROM FIREBASE ---
+async function loadDataFromFirebase() {
+  if (!navigator.onLine) {
+    alert('You are offline. Please connect to the internet to load data.');
+    return;
+  }
+  
+  try {
+    // Load groups from Firebase
+    const groupsSnapshot = await db.collection('groups').get();
+    const firebaseGroups = [];
+    groupsSnapshot.forEach(doc => {
+      const data = doc.data();
+      if (!data.deleted) {
+        firebaseGroups.push({
+          id: doc.id,
+          name: data.name,
+          members: data.members || [],
+          synced: true,
+          deleted: false
+        });
+      }
+    });
+    
+    // Load expenses from Firebase
+    const expensesSnapshot = await db.collection('expenses').get();
+    const firebaseExpenses = [];
+    expensesSnapshot.forEach(doc => {
+      const data = doc.data();
+      if (!data.deleted) {
+        firebaseExpenses.push({
+          id: doc.id,
+          groupId: data.groupId,
+          desc: data.desc,
+          amount: data.amount,
+          paidBy: data.paidBy,
+          splitAmong: data.splitAmong || [],
+          synced: true,
+          deleted: false,
+          settled: false
+        });
+      }
+    });
+    
+    // Save to localStorage
+    if (firebaseGroups.length > 0) {
+      setLocalGroups(firebaseGroups);
+      console.log(`Loaded ${firebaseGroups.length} groups from Firebase`);
+    }
+    
+    if (firebaseExpenses.length > 0) {
+      setLocalExpenses(firebaseExpenses);
+      console.log(`Loaded ${firebaseExpenses.length} expenses from Firebase`);
+    }
+    
+    // Reload UI
+    loadGroups();
+    loadExpenses();
+    
+    if (firebaseGroups.length > 0 || firebaseExpenses.length > 0) {
+      alert(`Successfully loaded ${firebaseGroups.length} groups and ${firebaseExpenses.length} expenses from cloud!`);
+    } else {
+      alert('No data found in cloud.');
+    }
+    
+  } catch (err) {
+    console.error('Failed to load data from Firebase:', err);
+    alert('Failed to load data from cloud: ' + err.message);
+  }
+}
+
+// --- LOAD FROM CLOUD BUTTON ---
+loadFromCloudBtn.onclick = async () => {
+  loadFromCloudBtn.disabled = true;
+  loadFromCloudBtn.textContent = 'Loading...';
+  try {
+    await loadDataFromFirebase();
+  } finally {
+    loadFromCloudBtn.disabled = false;
+    loadFromCloudBtn.textContent = 'Load from Cloud';
+  }
+};
+
+// --- AUTO-SYNC FUNCTIONALITY ---
+async function autoSync() {
+  if (!navigator.onLine) return;
+  
+  try {
+    // Upload local changes to Firebase
+    let groups = getLocalGroups();
+    const unsyncedGroups = groups.filter(g => !g.synced || g.deleted);
+    if (unsyncedGroups.length > 0) {
+      const groupBatch = db.batch();
+      unsyncedGroups.forEach(g => {
+        const ref = db.collection('groups').doc(g.id);
+        if (g.deleted) {
+          groupBatch.delete(ref);
+        } else {
+          groupBatch.set(ref, { name: g.name, members: g.members, deleted: !!g.deleted });
+        }
+      });
+      await groupBatch.commit();
+    }
+    
+    let allExpenses = getLocalExpenses();
+    const unsyncedExpenses = allExpenses.filter(e => !e.synced || e.deleted);
+    if (unsyncedExpenses.length > 0) {
+      const expenseBatch = db.batch();
+      unsyncedExpenses.forEach(e => {
+        const ref = db.collection('expenses').doc(e.id);
+        if (e.deleted) {
+          expenseBatch.delete(ref);
+        } else {
+          expenseBatch.set(ref, { groupId: e.groupId, desc: e.desc, amount: e.amount, paidBy: e.paidBy, splitAmong: e.splitAmong, deleted: !!e.deleted });
+        }
+      });
+      await expenseBatch.commit();
+    }
+    
+    // Mark as synced
+    if (unsyncedGroups.length > 0 || unsyncedExpenses.length > 0) {
+      groups = getLocalGroups().filter(g => !g.deleted).map(g => ({ ...g, synced: true }));
+      allExpenses = getLocalExpenses().filter(e => !e.deleted).map(e => ({ ...e, synced: true }));
+      setLocalGroups(groups);
+      setLocalExpenses(allExpenses);
+      console.log('Auto-sync completed');
+    }
+    
+  } catch (err) {
+    console.error('Auto-sync failed:', err);
+  }
+}
+
+// --- ENHANCED SYNC BUTTON ---
+syncBtn.onclick = async () => {
+  if (!navigator.onLine) {
+    alert('You are offline. Please connect to the internet to sync.');
+    return;
+  }
+  syncBtn.disabled = true;
+  syncBtn.textContent = 'Syncing...';
+  try {
+    await autoSync();
+    alert('Sync complete!');
+  } catch (err) {
+    alert('Sync failed: ' + err.message);
+  }
+  syncBtn.disabled = false;
+  syncBtn.textContent = 'Sync to Cloud';
+};
+
 // Utility: get color for a member (hash to color)
 function getAvatarColor(name) {
   const colors = [
@@ -660,4 +812,21 @@ function toggleSettlement(transactionId) {
 window.toggleSettlement = toggleSettlement;
 
 // --- INIT ---
-loadGroups(); 
+async function initializeApp() {
+  // First load any existing local data
+  loadGroups();
+  
+  // Check if we have any local data
+  const localGroups = getLocalGroups();
+  const localExpenses = getLocalExpenses();
+  
+  // Only auto-load from Firebase if no local data exists
+  if (localGroups.length === 0 && localExpenses.length === 0) {
+    console.log('No local data found - auto-loading from Firebase...');
+    await loadDataFromFirebase();
+  }
+  
+}
+
+// Start the app
+initializeApp(); 
