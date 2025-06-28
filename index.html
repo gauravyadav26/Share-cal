@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Simple Expense Splitter</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="style.css?v=1.0.1"/>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+</head>
+<body>
+  <div id="app">
+    <div id="sidebar">
+      <div id="group-section">
+        <h2>Groups</h2>
+        <form id="create-group-form">
+          <input type="text" id="group-name" placeholder="New group name" required/>
+          <input type="text" id="group-members" placeholder="Members (comma separated)" required/>
+          <button type="submit">Create Group</button>
+        </form>
+        <select id="group-select"></select>
+        <button id="delete-group-btn" style="margin-left:10px;">Delete Group</button>
+        <button id="edit-group-btn" style="margin-left:5px;">Edit Group</button>
+        <button id="sync-btn" style="margin-left:10px;margin-top: 10px;background:var(--primary-light);color:#fff;">Sync to Cloud</button>
+      </div>
+      <div id="member-paid-section">
+        <h3>Paid by Each Member</h3>
+        <ul id="member-paid-list"></ul>
+      </div>
+      <div id="settle-up-section">
+        <h3>Settle Up</h3>
+        <ul id="settle-up-list"></ul>
+      </div>
+    </div>
+    <div id="main-content">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+        <h2>Expenses</h2>
+        <div style="display:flex;gap:0.5rem;">
+          <button id="settlement-btn" style="background:var(--success);">💸 Settlement</button>
+          <button id="add-expense-btn" style="background:var(--primary);">＋ Add Expense</button>
+        </div>
+      </div>
+      <ul id="expenses-list"></ul>
+    </div>
+  </div>
+
+  <!-- Edit Group Modal -->
+  <div id="edit-group-modal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;padding:2rem;border-radius:8px;z-index:1001;min-width:400px;">
+    <h3>✏️ Edit Group</h3>
+    <form id="edit-group-form">
+      <input type="text" id="edit-group-name" placeholder="Group name" required/>
+      <input type="text" id="edit-group-members" placeholder="Members (comma separated)" required/>
+      <div style="display:flex;gap:0.5rem;margin-top:1rem;">
+        <button type="submit">Save Changes</button>
+        <button type="button" id="cancel-edit-group">Cancel</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Settlement Modal -->
+  <div id="settlement-modal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;padding:2rem;border-radius:8px;z-index:1001;min-width:400px;">
+    <h3>💸 Settlement Transactions</h3>
+    <div id="settlement-content">
+      <p>Mark payments as completed to track settlements:</p>
+      <div id="settlement-list"></div>
+    </div>
+    <button id="close-settlement-btn">Close</button>
+  </div>
+
+  <!-- Add Expense Modal -->
+  <div id="add-expense-modal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;padding:2rem;border-radius:8px;z-index:1001;min-width:300px;">
+    <h3>Add Expense</h3>
+    <form id="expense-form">
+      <input type="text" id="desc" placeholder="Description" required/>
+      <input type="number" id="amount" placeholder="Amount" required/>
+      <select id="paidBy" required></select>
+      <div id="splitAmongCheckboxes"></div>
+      <button type="submit">Add Expense</button>
+      <button type="button" id="cancel-add-expense">Cancel</button>
+    </form>
+  </div>
+
+  <!-- Modals -->
+  <div id="modal-overlay" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.3);z-index:1000;"></div>
+  <div id="edit-expense-modal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;padding:2rem;border-radius:8px;z-index:1001;min-width:300px;">
+    <h3>Edit Expense</h3>
+    <form id="edit-expense-form">
+      <input type="text" id="edit-desc" placeholder="Description" required/>
+      <input type="number" id="edit-amount" placeholder="Amount" required/>
+      <select id="edit-paidBy" required></select>
+      <div id="edit-splitAmongCheckboxes"></div>
+      <button type="submit">Save</button>
+      <button type="button" id="cancel-edit-expense">Cancel</button>
+    </form>
+  </div>
+  <div id="confirm-delete-modal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;padding:2rem;border-radius:8px;z-index:1001;min-width:300px;">
+    <h3 id="confirm-delete-title">Confirm Delete</h3>
+    <p id="confirm-delete-message"></p>
+    <button id="confirm-delete-btn">Delete</button>
+    <button id="cancel-delete-btn">Cancel</button>
+  </div>
+
+  <div id="confetti-container" class="confetti"></div>
+  <script src="app.js"></script>
+</body>
+</html> 
