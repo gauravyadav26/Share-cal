@@ -11,7 +11,11 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 </head>
 <body>
-  <div id="app">
+    <div style="display:flex;gap:0.5rem;justify-content:center;padding-top:1rem;}" >
+      <button id="settlement-btn" style="background:var(--success);">💸 Settlement</button>
+      <button id="add-expense-btn" style="background:var(--primary);">＋ Add Expense</button>
+    </div>
+    <div id="app">
     <div id="sidebar">
       <div id="group-section">
         <h2>Groups</h2>
@@ -21,7 +25,7 @@
           <button type="submit">Create Group</button>
         </form>
         <select id="group-select"></select>
-        <button id="delete-group-btn" style="margin-left:10px;">Delete Group</button>
+        <button id="delete-group-btn" style="margin-left:0px;">Delete Group</button>
         <button id="edit-group-btn" style="margin-left:5px;">Edit Group</button>
         <button id="sync-btn" style="margin-top: 10px;background:var(--primary-light);color:#fff;">Sync to Cloud</button>
       </div>
@@ -35,12 +39,8 @@
       </div>
     </div>
     <div id="main-content">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
         <h2>Expenses</h2>
-        <div style="display:flex;gap:0.5rem;">
-          <button id="settlement-btn" style="background:var(--success);">💸 Settlement</button>
-          <button id="add-expense-btn" style="background:var(--primary);">＋ Add Expense</button>
-        </div>
       </div>
       <ul id="expenses-list"></ul>
     </div>
